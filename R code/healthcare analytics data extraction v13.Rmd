@@ -1,0 +1,493 @@
+---
+title: "Healthcare Analytics Data Extraction"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Load libraries
+
+```{r}
+
+library(dplyr)
+library(lubridate)
+library(rockchalk)
+library(tidyverse)
+```
+
+
+```{r}
+#read in tables
+
+#setwd('/Users/celestine/Desktop/mimiciii_vitals')
+
+#setwd('C:/Users/weiji/OneDrive/Desktop/SPH 5104 Healthcare Analytics/Group Project/Dataset')
+
+setwd('C:\\Users\\jinfrances\\Desktop\\SSHSPH MSC\\Modules Notes\\SPH5104 Healthcare Data Analytics\\Group Assignment\\csv files\\')
+
+
+microbio <- read.csv("clinical_microbiologyevents.csv",na.strings=c("NA", "NULL"))
+
+admissions <- read.csv("clinical_admission.csv",na.strings=c("NA", "NULL"))
+
+patients <- read.csv("clinical_patients.csv", na.strings=c("NA", "NULL"))
+
+transfers<-read.csv("clinical_transfers.csv")
+
+dbp<-read.csv("Diastolicbp.csv") # For the vitals, NULL will be removed during cleaning
+
+hr<-read.csv("Heartrate.csv")
+
+rr<-read.csv("Respiratoryrate.csv")
+
+spo2<-read.csv("SpO2.csv")
+
+sbp<-read.csv("Systolicbp.csv")
+
+btemp<-read.csv("Temperature.csv")
+
+comorbid<-read.csv("comorbidity.csv")
+
+Intubated<-read.csv("intubated.csv")
+
+Ventilator<-read.csv("ventilator.csv")
+
+WBC<-read.csv("White Blood Cells.csv", header= TRUE, sep = ",", stringsAsFactors=FALSE)
+
+Platelets<-read.csv("Platelet Count.csv", header= TRUE, sep = ",", stringsAsFactors=FALSE)
+
+RDW<-read.csv("RDW.csv", header= TRUE, sep = ",", stringsAsFactors=FALSE)
+
+Lymphocytes<-read.csv("Lymphocytes.csv", header= TRUE, sep = ",", stringsAsFactors=FALSE)
+
+Neutrophils<-read.csv("Neutrophils.csv", header= TRUE, sep = ",", stringsAsFactors=FALSE)
+
+RBC<-read.csv("Red Blood Cells.csv", header= TRUE, sep = ",", stringsAsFactors=FALSE)
+
+Nitrite<-read.csv("Nitrite.csv")
+
+pH<-read.csv("pH.csv")
+
+SpecGrav<-read.csv("Specific Gravity.csv", header= TRUE, sep = ",", stringsAsFactors=FALSE)
+
+Glucose<-read.csv("Glucose.csv", header= TRUE, sep = ",", stringsAsFactors=FALSE)
+
+Basophils<-read.csv("Basophils.csv", header= TRUE, sep = ",", stringsAsFactors=FALSE)
+
+LD<-read.csv("Lactate Dehydrogenase.csv", header= TRUE, sep = ",", stringsAsFactors=FALSE)
+```
+
+
+
+
+
+
+
+```{r}
+list(unique(microbio$SPEC_TYPE_DESC))
+
+```
+
+```{r}
+
+#select only patients with catheter tip iv procedure
+
+cativ <- microbio[microbio$SPEC_TYPE_DESC == "CATHETER TIP-IV",]
+
+
+```
+
+
+```{r}
+#left join the admissions table on SUBJECT_ID and HADM_ID 
+
+catmerged <- dplyr::left_join(cativ, admissions, by=c("SUBJECT_ID"= "SUBJECT_ID", "HADM_ID" = "HADM_ID"))
+```
+
+
+
+```{r message=TRUE, warning=TRUE}
+
+#create admission date column by extracting date from admission timestamp column
+
+
+#sum(is.na(catmerged$ADMITDATE))
+
+catmerged$ADMITDATE <- as.Date(catmerged$ADMITTIME, format = "%d/%m/%Y")
+
+#check data format of the date variable
+
+str(catmerged$ADMITDATE)
+```
+
+```{r}
+#convert CHARTDATE data type to date
+catmerged$CHARTDATE <- as.Date(catmerged$CHARTDATE, format = "%Y-%m-%d")
+
+#check data format of the date variable
+str(catmerged$CHARTDATE)
+
+```
+
+
+```{r}
+
+#Create a new column called NUM_VISITS. It will pick out the number of visits based on a groupby of SUBJECT_ID and ADMITDATE. 
+#We are only interested in the first ICU admission date (ie value of 1)
+
+catmerged<- catmerged %>% 
+  arrange(SUBJECT_ID, as.Date(ADMITDATE)) %>% 
+  group_by(SUBJECT_ID) %>% 
+  mutate(NUM_VISITS = row_number())
+```
+
+
+
+```{r}
+##Use this block of code to check, change the SUBJECT_ID value to see if the transformations work
+
+testrows <- subset(catmerged, (SUBJECT_ID==156))
+
+select(testrows, 'SUBJECT_ID', 'ADMITDATE', 'CHARTDATE', 'ORG_ITEMID','ORG_NAME','NUM_VISITS')
+
+```
+
+
+
+```{r}
+
+#State the inclusion criteria
+#create a new column for inclusion criteria based on 2 conditions
+#criteria 1: the CHARTDATE has to be 2 days after ADMITDATE but not more than 14 days
+#criteria 2: it has to be limited to first ICU admission, meaning NUM_VISITS with value of 1
+#rest of the rows will be "NA"
+
+
+diff_Date = catmerged$CHARTDATE - catmerged$ADMITDATE
+
+
+catmerged$INCLUSION <-'EXCLUDE'
+catmerged$INCLUSION[(diff_Date >=2 & diff_Date <=28) & catmerged$NUM_VISITS == 1] <- 'INCLUDE'
+
+```
+
+
+```{r}
+#Check the number that are included and excluded
+table(catmerged$INCLUSION, useNA="always")
+```
+
+
+
+```{r}
+
+#Create a new column to store case '1' and control '0'. Case is where patient has presence of blood stream infection while control has no infection
+
+catmerged$GROUPS <- 'NA'
+catmerged$GROUPS[catmerged$INCLUSION == 'INCLUDE' & is.na(catmerged$ORG_ITEMID) & is.na(catmerged$ORG_NAME) ] <- '0'
+catmerged$GROUPS[catmerged$INCLUSION == 'INCLUDE' & !is.na(catmerged$ORG_ITEMID) & !is.na(catmerged$ORG_NAME) ] <- '1'
+
+```
+
+
+
+
+```{r}
+#Check the number of each value in catmerged$INCLUSION
+table(catmerged$GROUPS, useNA="always")
+
+```
+
+## Based on those included there are 3610 rows that are 'CONTROLS' and 262 'CASES'
+
+
+
+```{r}
+##Use this block of code to check, change the SUBJECT_ID value to see if the inclusion criteria is correct
+
+testrows2 <- subset(catmerged, (SUBJECT_ID==65650))
+
+select(testrows2, 'SUBJECT_ID', 'ADMITDATE', 'CHARTDATE', 'ORG_ITEMID','ORG_NAME','NUM_VISITS','INCLUSION' ,'GROUPS')
+```
+
+
+```{r}
+##### VITALS DATA #####
+# Original .csv file is from SQL export, filtering for the earliest CHARTTIME
+# for each subject_id's corresponding vitals (ITEMID)
+# Some subject's had different icu stays with carevue and metavision.
+# In such scenarios, during cleaning, only the vitals value with earliest charttime is taken,
+# corresponding to first icustay in whichever system
+
+### CLEANING ###
+
+## NON-INVASIVE DIASTOLIC BLOOD PRESSURE (8441, 220180)
+dbp<-subset(dbp, dbp$VALUENUM>10 & dbp$VALUENUM<280)
+# Descriptives of VALUENUM
+min(dbp$VALUENUM)
+max(dbp$VALUENUM)
+hist(dbp$VALUENUM)
+# Number of unique ICUSTAY_IDs
+sum(!duplicated(dbp$ICUSTAY_ID))
+# Number of unique SUBJECT_IDs
+sum(!duplicated(dbp$SUBJECT_ID))
+# Order rows by ascending CHARTTIME
+dbp<-dbp[order(dbp$CHARTTIME),]
+# Remove duplicate ICUSTAY_IDs (for when more than one version of itemid present)
+dbp<-dbp[!duplicated(dbp$ICUSTAY_ID),]
+# Remove duplicate SUBJECT_IDs keeping row with earliest CHARTTIME (get first icustay)
+dbp<-dbp[!duplicated(dbp$SUBJECT_ID),]
+# Rename VALUENUM
+names(dbp)[names(dbp) == 'VALUENUM'] <- 'diastolic_bp'
+
+
+## HEART RATE (211, 220045)
+hr<-subset(hr, hr$VALUENUM>1 & hr$VALUENUM<=300)
+# Descriptives of VALUENUM
+min(hr$VALUENUM)
+max(hr$VALUENUM)
+hist(hr$VALUENUM)
+# Number of unique ICUSTAY_IDs
+sum(!duplicated(hr$ICUSTAY_ID))
+# Number of unique SUBJECT_IDs
+sum(!duplicated(hr$SUBJECT_ID))
+# Order rows by ascending CHARTTIME
+hr<-hr[order(hr$CHARTTIME),]
+# Remove duplicate ICUSTAY_IDs (for when more than one version of itemid present)
+hr<-hr[!duplicated(hr$ICUSTAY_ID),]
+# Remove duplicate SUBJECT_IDs keeping row with earliest CHARTTIME (get first icustay)
+hr<-hr[!duplicated(hr$SUBJECT_ID),]
+# Rename VALUENUM
+names(hr)[names(hr) == 'VALUENUM'] <- 'heart_rate'
+
+
+## RESPIRATORY RATE (618, 220210)
+rr<-subset(rr, rr$VALUENUM>=0 & rr$VALUENUM<200)
+# Descriptives of VALUENUM
+min(rr$VALUENUM)
+max(rr$VALUENUM)
+hist(rr$VALUENUM)
+# Number of unique ICUSTAY_IDs
+sum(!duplicated(rr$ICUSTAY_ID))
+# Number of unique SUBJECT_IDs
+sum(!duplicated(rr$SUBJECT_ID))
+# Order rows by ascending CHARTTIME
+rr<-rr[order(rr$CHARTTIME),]
+# Remove duplicate ICUSTAY_IDs (for when more than one version of itemid present)
+rr<-rr[!duplicated(rr$ICUSTAY_ID),]
+# Remove duplicate SUBJECT_IDs keeping row with earliest CHARTTIME (get first icustay)
+rr<-rr[!duplicated(rr$SUBJECT_ID),]
+# Rename VALUENUM
+names(rr)[names(rr) == 'VALUENUM'] <- 'respi_rate'
+
+
+## OXYGEN SATURATION SPO2 (646, 220277)
+spo2<-subset(spo2, spo2$VALUENUM>50 & spo2$VALUENUM<=100)
+# Descriptives of VALUENUM
+min(spo2$VALUENUM)
+max(spo2$VALUENUM)
+hist(spo2$VALUENUM)
+# Number of unique ICUSTAY_IDs
+sum(!duplicated(spo2$ICUSTAY_ID))
+# Number of unique SUBJECT_IDs
+sum(!duplicated(spo2$SUBJECT_ID))
+# Order rows by ascending CHARTTIME
+spo2<-spo2[order(spo2$CHARTTIME),]
+# Remove duplicate ICUSTAY_IDs (for when more than one version of itemid present)
+spo2<-spo2[!duplicated(spo2$ICUSTAY_ID),]
+# Remove duplicate SUBJECT_IDs keeping row with earliest CHARTTIME (get first icustay)
+spo2<-spo2[!duplicated(spo2$SUBJECT_ID),]
+# Rename VALUENUM
+names(spo2)[names(spo2) == 'VALUENUM'] <- 'blood_oxygen'
+
+
+## NON-INVASIVE SYSTOLIC BLOOD PRESSURE (455, 220179)
+sbp<-subset(sbp, sbp$VALUENUM>40 & sbp$VALUENUM<280)
+# Descriptives of VALUENUM
+min(sbp$VALUENUM)
+max(sbp$VALUENUM)
+hist(sbp$VALUENUM)
+# Number of unique ICUSTAY_IDs
+sum(!duplicated(sbp$ICUSTAY_ID))
+# Number of unique SUBJECT_IDs
+sum(!duplicated(sbp$SUBJECT_ID))
+# Order rows by ascending CHARTTIME
+sbp<-sbp[order(sbp$CHARTTIME),]
+# Remove duplicate ICUSTAY_IDs (for when more than one version of itemid present)
+sbp<-sbp[!duplicated(sbp$ICUSTAY_ID),]
+# Remove duplicate SUBJECT_IDs keeping row with earliest CHARTTIME (get first icustay)
+sbp<-sbp[!duplicated(sbp$SUBJECT_ID),]
+# Rename VALUENUM
+names(sbp)[names(sbp) == 'VALUENUM'] <- 'systolic_bp'
+
+
+## BODY TEMPERATURE IN F (678, 223761)
+btemp<-subset(btemp, btemp$VALUENUM>=80 & btemp$VALUENUM<110)
+# Descriptives of VALUENUM
+min(btemp$VALUENUM)
+max(btemp$VALUENUM)
+hist(btemp$VALUENUM)
+# Number of unique ICUSTAY_IDs
+sum(!duplicated(btemp$ICUSTAY_ID))
+# Number of unique SUBJECT_IDs
+sum(!duplicated(btemp$SUBJECT_ID))
+# Order rows by ascending CHARTTIME
+btemp<-btemp[order(btemp$CHARTTIME),]
+# Remove duplicate ICUSTAY_IDs (for when more than one version of itemid present)
+btemp<-btemp[!duplicated(btemp$ICUSTAY_ID),]
+# Remove duplicate SUBJECT_IDs keeping row with earliest CHARTTIME (get first icustay)
+btemp<-btemp[!duplicated(btemp$SUBJECT_ID),]
+# Rename VALUENUM
+names(btemp)[names(btemp) == 'VALUENUM'] <- 'body_temp'
+
+### MERGING ###
+# merged to catmerged via left join
+catmerged<- merge(x = catmerged, y = dbp[,c("SUBJECT_ID", "diastolic_bp")], by = "SUBJECT_ID", all.x=TRUE)
+catmerged<- merge(x = catmerged, y = hr[,c("SUBJECT_ID", "heart_rate")], by = "SUBJECT_ID", all.x=TRUE)
+catmerged<- merge(x = catmerged, y = rr[,c("SUBJECT_ID", "respi_rate")], by = "SUBJECT_ID", all.x=TRUE)
+catmerged<- merge(x = catmerged, y = spo2[,c("SUBJECT_ID", "blood_oxygen")], by = "SUBJECT_ID", all.x=TRUE)
+catmerged<- merge(x = catmerged, y = sbp[,c("SUBJECT_ID", "systolic_bp")], by = "SUBJECT_ID", all.x=TRUE)
+catmerged<- merge(x = catmerged, y = btemp[,c("SUBJECT_ID", "body_temp")], by = "SUBJECT_ID", all.x=TRUE)
+
+
+```
+
+```{r}
+#demographics data for age and gender
+padm <- dplyr::left_join(admissions, patients, by ="SUBJECT_ID")
+#selecting gender and DOB variable
+demo <- padm[c("SUBJECT_ID", "GENDER", "DOB")]
+demo <- demo %>%
+  distinct(SUBJECT_ID, .keep_all = TRUE)
+#merge to main dataset
+catmerged <-dplyr::left_join(catmerged, demo, by ="SUBJECT_ID")
+#calculating AGE
+catmerged$ADMITDATE = ymd(catmerged$ADMITDATE)
+catmerged$DOB = ymd(catmerged$DOB)
+catmerged$AGE = interval(catmerged$DOB, catmerged$ADMITDATE) %>% as.numeric('years') %>% round(digits=0)
+
+#Co-morbidity 
+#Original .csv is from SQL export
+#filtering for 6 specific conditions: hypertension, chronic pulmonary disease, diabetes(non-complications), renal failure, rheumatoid arthritis, cardiac arrhythmias, liver disease
+#comorbidity combines all diagnosis from prior admissions(as past medical history)
+Combd <- comorbid[c("hadm_id", "HYPERTENSION", "DIABETES_UNCOMPLICATED", "RHEUMATOID_ARTHRITIS", "RENAL_FAILURE", "CHRONIC_PULMONARY", "CARDIAC_ARRHYTHMIAS", "LIVER_DISEASE")]
+Combd <- Combd %>% rename(HADM_ID = hadm_id)
+#merge to main dataset
+catmerged <-dplyr::left_join(catmerged, Combd, by ="HADM_ID")
+
+```
+
+```{r}
+#LAB TEST RESULTS
+#Data for each individual lab test has been cleaned separately. Code stored in a separate R script
+#Merging the selected lab tests individually into the main dataframe
+
+#Intubation
+catmerged<- merge(x = catmerged, y = Intubated[,c("SUBJECT_ID", "INTUBATION")], by = "SUBJECT_ID", all.x=TRUE)
+
+#Ventilator
+catmerged<- merge(x = catmerged, y = Ventilator[,c("SUBJECT_ID", "VENTILATOR")], by = "SUBJECT_ID", all.x=TRUE)
+
+#White Blood Cells
+WBC$WBC<-as.numeric(WBC$WBC)
+catmerged<- merge(x = catmerged, y = WBC[,c("SUBJECT_ID", "WBC")], by = "SUBJECT_ID", all.x=TRUE)
+
+#Platelet Count
+Platelets$Platelet<- as.numeric(Platelets$Platelet)
+catmerged<- merge(x = catmerged, y = Platelets[,c("SUBJECT_ID", "Platelet")], by = "SUBJECT_ID", all.x=TRUE)
+
+#RDW
+RDW$RDW<- as.numeric(RDW$RDW)
+catmerged<- merge(x = catmerged, y = RDW[,c("SUBJECT_ID", "RDW")], by = "SUBJECT_ID", all.x=TRUE)
+
+#Lymphocytes
+Lymphocytes$Lymphocytes<- as.numeric(Lymphocytes$Lymphocytes)
+catmerged<- merge(x = catmerged, y = Lymphocytes[,c("SUBJECT_ID", "Lymphocytes")], by = "SUBJECT_ID", all.x=TRUE)
+
+#Neutrophils
+Neutrophils$Neutrophils<- as.numeric(Neutrophils$Neutrophils)
+catmerged<- merge(x = catmerged, y = Neutrophils[,c("SUBJECT_ID", "Neutrophils")], by = "SUBJECT_ID", all.x=TRUE)
+
+#Red Blood Cells
+RBC$RBC<- as.numeric(RBC$RBC)
+catmerged<- merge(x = catmerged, y = RBC[,c("SUBJECT_ID", "RBC")], by = "SUBJECT_ID", all.x=TRUE)
+
+#Nitrite
+catmerged<- merge(x = catmerged, y = Nitrite[,c("SUBJECT_ID", "Nitrite")], by = "SUBJECT_ID", all.x=TRUE)
+
+#pH
+catmerged<- merge(x = catmerged, y = pH[,c("SUBJECT_ID", "pH")], by = "SUBJECT_ID", all.x=TRUE)
+catmerged$pH<- as.numeric(catmerged$pH)
+
+#Specific Gravity
+SpecGrav$SpecificGravity<-as.numeric(SpecGrav$SpecificGravity)
+catmerged<- merge(x = catmerged, y = SpecGrav[,c("SUBJECT_ID", "SpecificGravity")], by = "SUBJECT_ID", all.x=TRUE)
+
+#Glucose
+Glucose$Glucose<-as.numeric(Glucose$Glucose)
+catmerged<- merge(x = catmerged, y = Glucose[,c("SUBJECT_ID", "Glucose")], by = "SUBJECT_ID", all.x=TRUE)
+
+#Basophils
+Basophils$Basophils<-as.numeric(Basophils$Basophils)
+catmerged<- merge(x = catmerged, y = Basophils[,c("SUBJECT_ID", "Basophils")], by = "SUBJECT_ID", all.x=TRUE)
+
+#Lactate Dehydrogenase
+LD$LactateDehydrogenase<-as.numeric(LD$LactateDehydrogenase)
+catmerged<- merge(x = catmerged, y = LD[,c("SUBJECT_ID", "LactateDehydrogenase")], by = "SUBJECT_ID", all.x=TRUE)
+
+
+```
+
+```{r}
+# ICU CAREUNIT TYPE
+# criteria: CSRU highest priority (over SICU) for all others, take ICU at earliest INTIME
+
+# remove entries that are not related to ICU
+transfers<-subset(transfers,(!is.na(transfers$ICUSTAY_ID)))
+# separate CRSU and non CRSU
+transfers$careunit <- 'NA'
+transfers$careunit[transfers$PREV_CAREUNIT == 'CSRU' | transfers$CURR_CAREUNIT == 'CSRU'] <- 'CSRU'
+transfers_CSRU<-subset(transfers, (transfers$careunit=='CSRU'))
+transfers<-subset(transfers, !(transfers$careunit=='CSRU'))
+
+
+# clean CRSU entries
+# sort by INTIME and remove duplicate ICUSTAY_IDs and SUBJECT_IDs entry of earliest INTIME is kept for each SUBJECT_ID
+transfers_CSRU<-transfers_CSRU[order(transfers_CSRU$INTIME),]
+transfers_CSRU<-transfers_CSRU[!duplicated(transfers_CSRU$ICUSTAY_ID),]
+transfers_CSRU<-transfers_CSRU[!duplicated(transfers_CSRU$SUBJECT_ID),]
+
+# create careunit for non-CSRU types
+transfers$careunit[transfers$PREV_CAREUNIT == 'NICU' | transfers$CURR_CAREUNIT == 'NICU'] <- 'NICU'
+transfers$careunit[transfers$PREV_CAREUNIT == 'CCU' | transfers$CURR_CAREUNIT == 'CCU'] <- 'CCU'
+transfers$careunit[transfers$PREV_CAREUNIT == 'MICU' | transfers$CURR_CAREUNIT == 'MICU'] <- 'MICU'
+transfers$careunit[transfers$PREV_CAREUNIT == 'SICU' | transfers$CURR_CAREUNIT == 'SICU'] <- 'SICU'
+transfers$careunit[transfers$PREV_CAREUNIT == 'TSICU' | transfers$CURR_CAREUNIT == 'TSICU'] <- 'TSICU'
+sum(is.na(transfers$careunit))
+# clean non-CSRU entries
+# sort by INTIME and remove duplicate ICUSTAY_IDs and SUBJECT_IDs entry of earliest INTIME is kept for each SUBJECT_ID
+transfers<-transfers[order(transfers$INTIME),]
+transfers<-transfers[!duplicated(transfers$ICUSTAY_ID),]
+transfers<-transfers[!duplicated(transfers$SUBJECT_ID),]
+# remove duplicate entries for SICU->CSRU
+transfers<-subset(transfers,(!(transfers$SUBJECT_ID %in% transfers_CSRU$SUBJECT_ID)))
+
+# append CSRU entries onto non-CSRU entries
+transfers <- rbind(transfers,transfers_CSRU)
+
+#checks
+#sum(!duplicated(transfers$ICUSTAY_ID))
+#sum(is.na(transfers$careunit))
+
+# MERGE CAREUNIT TO CATMERGE
+catmerged<- merge(x = catmerged, y = transfers[,c("SUBJECT_ID", "careunit")], by = "SUBJECT_ID", all.x=TRUE)
+
+```
+
+
+```{r}
+write.csv(catmerged,"dataextractedv2.csv",fileEncoding = "UTF-8")
+```
+

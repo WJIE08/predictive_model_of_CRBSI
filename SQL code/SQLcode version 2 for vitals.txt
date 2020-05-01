@@ -1,0 +1,496 @@
+From Selva, code to extract the earliest vital value for each subject_id
+
+select * from (SELECT *, DENSE_RANK() OVER (PARTITION BY subject_id,itemid ORDER BY charttime asc) as rank
+FROM `physionet-data.mimiciii_clinical.chartevents` where itemid in (676,678,223761,223762)) 
+where rank = 1
+order by subject_id
+
+
+Table of itemid values to use for extraction of vitals
+
+			Carevue		Metavision
+Temperature		678		223761
+Heart Rate		211		220045
+Systolic BP		455		220179
+Diastolic BP		8441		220180
+SpO2			646		220277
+Respiratory Rate	618		220210
+
+The column of in interest in 'chartevents' is 'VALUENUM'.
+
+Inclusion criteria for 'valid' values, based on looking at histogram of all values.
+Some are based on literature, but hard to define as ICU patients are very ill and
+vitals may be far away from normal range.
+
+Temperature (F) 	80<=x<110
+Heart Rate (BPM)	1<x<=300
+Systolic BP (mmHg) 	40<x<280
+Diastolic BP (mmHg)	10<x<280
+SpO2 (%) 		50<x<=100
+Respiratory Rate (BPM) 	0<=x<200
+
+------------------------------------------------------------------------------------------------------------
+
+/*Code for extraction of individual lab test*/
+/*Only information for subjects that have a cativ sent for microbiological testing was extracted*?
+
+/*Intubated*/
+SELECT *
+FROM `physionet-data.mimiciii_clinical.labevents`
+WHERE SUBJECT_ID IN (
+SELECT SUBJECT_ID FROM `physionet-data.mimiciii_clinical.microbiologyevents`
+WHERE SPEC_TYPE_DESC="CATHETER TIP-IV")
+AND ITEMID IN (50812)
+
+/*Ventilator*/
+SELECT *
+FROM `physionet-data.mimiciii_clinical.labevents`
+WHERE SUBJECT_ID IN (
+SELECT SUBJECT_ID FROM `physionet-data.mimiciii_clinical.microbiologyevents`
+WHERE SPEC_TYPE_DESC="CATHETER TIP-IV")
+AND ITEMID IN (50828)
+
+/*Absolute Hemoglobin*/
+SELECT *
+FROM `physionet-data.mimiciii_clinical.labevents`
+WHERE SUBJECT_ID IN (
+SELECT SUBJECT_ID FROM `physionet-data.mimiciii_clinical.microbiologyevents`
+WHERE SPEC_TYPE_DESC="CATHETER TIP-IV")
+AND ITEMID IN (50855)
+
+/*C-reactive protein*/
+SELECT *
+FROM `physionet-data.mimiciii_clinical.labevents`
+WHERE SUBJECT_ID IN (
+SELECT SUBJECT_ID FROM `physionet-data.mimiciii_clinical.microbiologyevents`
+WHERE SPEC_TYPE_DESC="CATHETER TIP-IV")
+AND ITEMID IN (50889)
+
+/*C3 protein*/
+SELECT *
+FROM `physionet-data.mimiciii_clinical.labevents`
+WHERE SUBJECT_ID IN (
+SELECT SUBJECT_ID FROM `physionet-data.mimiciii_clinical.microbiologyevents`
+WHERE SPEC_TYPE_DESC="CATHETER TIP-IV")
+AND ITEMID IN (50890)
+
+/*C4 protein*/
+SELECT *
+FROM `physionet-data.mimiciii_clinical.labevents`
+WHERE SUBJECT_ID IN (
+SELECT SUBJECT_ID FROM `physionet-data.mimiciii_clinical.microbiologyevents`
+WHERE SPEC_TYPE_DESC="CATHETER TIP-IV")
+AND ITEMID IN (50891)
+
+/*Cholesterol Ratio*/
+SELECT *
+FROM `physionet-data.mimiciii_clinical.labevents`
+WHERE SUBJECT_ID IN (
+SELECT SUBJECT_ID FROM `physionet-data.mimiciii_clinical.microbiologyevents`
+WHERE SPEC_TYPE_DESC="CATHETER TIP-IV")
+AND ITEMID IN (50903)
+
+/*HDL*/
+SELECT *
+FROM `physionet-data.mimiciii_clinical.labevents`
+WHERE SUBJECT_ID IN (
+SELECT SUBJECT_ID FROM `physionet-data.mimiciii_clinical.microbiologyevents`
+WHERE SPEC_TYPE_DESC="CATHETER TIP-IV")
+AND ITEMID IN (50904)
+
+/*LDL*/
+SELECT *
+FROM `physionet-data.mimiciii_clinical.labevents`
+WHERE SUBJECT_ID IN (
+SELECT SUBJECT_ID FROM `physionet-data.mimiciii_clinical.microbiologyevents`
+WHERE SPEC_TYPE_DESC="CATHETER TIP-IV")
+AND ITEMID IN (50906)
+
+/*Cholesterol Total*/
+SELECT *
+FROM `physionet-data.mimiciii_clinical.labevents`
+WHERE SUBJECT_ID IN (
+SELECT SUBJECT_ID FROM `physionet-data.mimiciii_clinical.microbiologyevents`
+WHERE SPEC_TYPE_DESC="CATHETER TIP-IV")
+AND ITEMID IN (50907)
+
+/*Cortisol*/
+SELECT *
+FROM `physionet-data.mimiciii_clinical.labevents`
+WHERE SUBJECT_ID IN (
+SELECT SUBJECT_ID FROM `physionet-data.mimiciii_clinical.microbiologyevents`
+WHERE SPEC_TYPE_DESC="CATHETER TIP-IV")
+AND ITEMID IN (50909)
+
+/*Estimated GFR*/
+SELECT *
+FROM `physionet-data.mimiciii_clinical.labevents`
+WHERE SUBJECT_ID IN (
+SELECT SUBJECT_ID FROM `physionet-data.mimiciii_clinical.microbiologyevents`
+WHERE SPEC_TYPE_DESC="CATHETER TIP-IV")
+AND ITEMID IN (50920)
+
+
+/*Glucose*/
+SELECT *
+FROM `physionet-data.mimiciii_clinical.labevents`
+WHERE SUBJECT_ID IN (
+SELECT SUBJECT_ID FROM `physionet-data.mimiciii_clinical.microbiologyevents`
+WHERE SPEC_TYPE_DESC="CATHETER TIP-IV")
+AND ITEMID IN (50931)
+
+/*Hepatitis A Virus IgM Antibody*/
+SELECT *
+FROM `physionet-data.mimiciii_clinical.labevents`
+WHERE SUBJECT_ID IN (
+SELECT SUBJECT_ID FROM `physionet-data.mimiciii_clinical.microbiologyevents`
+WHERE SPEC_TYPE_DESC="CATHETER TIP-IV")
+AND ITEMID IN (50938)
+
+/*Hepatitis B Core Antibody, IgM*/
+SELECT *
+FROM `physionet-data.mimiciii_clinical.labevents`
+WHERE SUBJECT_ID IN (
+SELECT SUBJECT_ID FROM `physionet-data.mimiciii_clinical.microbiologyevents`
+WHERE SPEC_TYPE_DESC="CATHETER TIP-IV")
+AND ITEMID IN (50939)
+
+/*Hepatitis B surface Antibody*/
+SELECT *
+FROM `physionet-data.mimiciii_clinical.labevents`
+WHERE SUBJECT_ID IN (
+SELECT SUBJECT_ID FROM `physionet-data.mimiciii_clinical.microbiologyevents`
+WHERE SPEC_TYPE_DESC="CATHETER TIP-IV")
+AND ITEMID IN (50940)
+
+/*Hepatitis B surface antigen*/
+SELECT *
+FROM `physionet-data.mimiciii_clinical.labevents`
+WHERE SUBJECT_ID IN (
+SELECT SUBJECT_ID FROM `physionet-data.mimiciii_clinical.microbiologyevents`
+WHERE SPEC_TYPE_DESC="CATHETER TIP-IV")
+AND ITEMID IN (50941)
+
+/*Hepatitis B Virus Core antibody*/
+SELECT *
+FROM `physionet-data.mimiciii_clinical.labevents`
+WHERE SUBJECT_ID IN (
+SELECT SUBJECT_ID FROM `physionet-data.mimiciii_clinical.microbiologyevents`
+WHERE SPEC_TYPE_DESC="CATHETER TIP-IV")
+AND ITEMID IN (50942)
+
+/*Hepatitis C virus antibody*/
+SELECT *
+FROM `physionet-data.mimiciii_clinical.labevents`
+WHERE SUBJECT_ID IN (
+SELECT SUBJECT_ID FROM `physionet-data.mimiciii_clinical.microbiologyevents`
+WHERE SPEC_TYPE_DESC="CATHETER TIP-IV")
+AND ITEMID IN (50943)
+
+/*HIV antibody*/
+SELECT *
+FROM `physionet-data.mimiciii_clinical.labevents`
+WHERE SUBJECT_ID IN (
+SELECT SUBJECT_ID FROM `physionet-data.mimiciii_clinical.microbiologyevents`
+WHERE SPEC_TYPE_DESC="CATHETER TIP-IV")
+AND ITEMID IN (50944)
+
+/*Homocysteine*/
+SELECT *
+FROM `physionet-data.mimiciii_clinical.labevents`
+WHERE SUBJECT_ID IN (
+SELECT SUBJECT_ID FROM `physionet-data.mimiciii_clinical.microbiologyevents`
+WHERE SPEC_TYPE_DESC="CATHETER TIP-IV")
+AND ITEMID IN (50945)
+
+/*Immunoglobulin A*/
+SELECT *
+FROM `physionet-data.mimiciii_clinical.labevents`
+WHERE SUBJECT_ID IN (
+SELECT SUBJECT_ID FROM `physionet-data.mimiciii_clinical.microbiologyevents`
+WHERE SPEC_TYPE_DESC="CATHETER TIP-IV")
+AND ITEMID IN (50949)
+
+/*Immunoglobulin G*/
+SELECT *
+FROM `physionet-data.mimiciii_clinical.labevents`
+WHERE SUBJECT_ID IN (
+SELECT SUBJECT_ID FROM `physionet-data.mimiciii_clinical.microbiologyevents`
+WHERE SPEC_TYPE_DESC="CATHETER TIP-IV")
+AND ITEMID IN (50950)
+
+/*Immunoglobulin M*/
+SELECT *
+FROM `physionet-data.mimiciii_clinical.labevents`
+WHERE SUBJECT_ID IN (
+SELECT SUBJECT_ID FROM `physionet-data.mimiciii_clinical.microbiologyevents`
+WHERE SPEC_TYPE_DESC="CATHETER TIP-IV")
+AND ITEMID IN (50951)
+
+/*Lactate Dehydrogenase*/
+SELECT *
+FROM `physionet-data.mimiciii_clinical.labevents`
+WHERE SUBJECT_ID IN (
+SELECT SUBJECT_ID FROM `physionet-data.mimiciii_clinical.microbiologyevents`
+WHERE SPEC_TYPE_DESC="CATHETER TIP-IV")
+AND ITEMID IN (50954)
+
+/*Rheumatoid Factor*/
+SELECT *
+FROM `physionet-data.mimiciii_clinical.labevents`
+WHERE SUBJECT_ID IN (
+SELECT SUBJECT_ID FROM `physionet-data.mimiciii_clinical.microbiologyevents`
+WHERE SPEC_TYPE_DESC="CATHETER TIP-IV")
+AND ITEMID IN (50980)
+
+/*Absolute CD3 count*/
+SELECT *
+FROM `physionet-data.mimiciii_clinical.labevents`
+WHERE SUBJECT_ID IN (
+SELECT SUBJECT_ID FROM `physionet-data.mimiciii_clinical.microbiologyevents`
+WHERE SPEC_TYPE_DESC="CATHETER TIP-IV")
+AND ITEMID IN (51130)
+
+/*Absolute CD 4 count*/
+SELECT *
+FROM `physionet-data.mimiciii_clinical.labevents`
+WHERE SUBJECT_ID IN (
+SELECT SUBJECT_ID FROM `physionet-data.mimiciii_clinical.microbiologyevents`
+WHERE SPEC_TYPE_DESC="CATHETER TIP-IV")
+AND ITEMID IN (51131)
+
+/*Absolute Lymphocytes count*/
+SELECT *
+FROM `physionet-data.mimiciii_clinical.labevents`
+WHERE SUBJECT_ID IN (
+SELECT SUBJECT_ID FROM `physionet-data.mimiciii_clinical.microbiologyevents`
+WHERE SPEC_TYPE_DESC="CATHETER TIP-IV")
+AND ITEMID IN (51133)
+
+/*Bands*/
+SELECT *
+FROM `physionet-data.mimiciii_clinical.labevents`
+WHERE SUBJECT_ID IN (
+SELECT SUBJECT_ID FROM `physionet-data.mimiciii_clinical.microbiologyevents`
+WHERE SPEC_TYPE_DESC="CATHETER TIP-IV")
+AND ITEMID IN (51144)
+
+/*Basophils*/
+SELECT *
+FROM `physionet-data.mimiciii_clinical.labevents`
+WHERE SUBJECT_ID IN (
+SELECT SUBJECT_ID FROM `physionet-data.mimiciii_clinical.microbiologyevents`
+WHERE SPEC_TYPE_DESC="CATHETER TIP-IV")
+AND ITEMID IN (51146)
+
+/*CD16/56*/
+SELECT *
+FROM `physionet-data.mimiciii_clinical.labevents`
+WHERE SUBJECT_ID IN (
+SELECT SUBJECT_ID FROM `physionet-data.mimiciii_clinical.microbiologyevents`
+WHERE SPEC_TYPE_DESC="CATHETER TIP-IV")
+AND ITEMID IN (51160)
+
+/*CD16/56 absolute counts*/
+SELECT *
+FROM `physionet-data.mimiciii_clinical.labevents`
+WHERE SUBJECT_ID IN (
+SELECT SUBJECT_ID FROM `physionet-data.mimiciii_clinical.microbiologyevents`
+WHERE SPEC_TYPE_DESC="CATHETER TIP-IV")
+AND ITEMID IN (51162)
+
+/*CD16/56 percentage*/
+SELECT *
+FROM `physionet-data.mimiciii_clinical.labevents`
+WHERE SUBJECT_ID IN (
+SELECT SUBJECT_ID FROM `physionet-data.mimiciii_clinical.microbiologyevents`
+WHERE SPEC_TYPE_DESC="CATHETER TIP-IV")
+AND ITEMID IN (51163)
+
+/*CD3 percentage*/
+SELECT *
+FROM `physionet-data.mimiciii_clinical.labevents`
+WHERE SUBJECT_ID IN (
+SELECT SUBJECT_ID FROM `physionet-data.mimiciii_clinical.microbiologyevents`
+WHERE SPEC_TYPE_DESC="CATHETER TIP-IV")
+AND ITEMID IN (51174)
+
+/*CD3 absolute count*/
+SELECT *
+FROM `physionet-data.mimiciii_clinical.labevents`
+WHERE SUBJECT_ID IN (
+SELECT SUBJECT_ID FROM `physionet-data.mimiciii_clinical.microbiologyevents`
+WHERE SPEC_TYPE_DESC="CATHETER TIP-IV")
+AND ITEMID IN (51175)
+
+/*CD3 cells percentage*/
+SELECT *
+FROM `physionet-data.mimiciii_clinical.labevents`
+WHERE SUBJECT_ID IN (
+SELECT SUBJECT_ID FROM `physionet-data.mimiciii_clinical.microbiologyevents`
+WHERE SPEC_TYPE_DESC="CATHETER TIP-IV")
+AND ITEMID IN (51176)
+
+/*CD4 cells percentage*/
+SELECT *
+FROM `physionet-data.mimiciii_clinical.labevents`
+WHERE SUBJECT_ID IN (
+SELECT SUBJECT_ID FROM `physionet-data.mimiciii_clinical.microbiologyevents`
+WHERE SPEC_TYPE_DESC="CATHETER TIP-IV")
+AND ITEMID IN (51180)
+
+/*CD4/CD8 ratio*/
+SELECT *
+FROM `physionet-data.mimiciii_clinical.labevents`
+WHERE SUBJECT_ID IN (
+SELECT SUBJECT_ID FROM `physionet-data.mimiciii_clinical.microbiologyevents`
+WHERE SPEC_TYPE_DESC="CATHETER TIP-IV")
+AND ITEMID IN (51181)
+
+/*CD64*/
+SELECT *
+FROM `physionet-data.mimiciii_clinical.labevents`
+WHERE SUBJECT_ID IN (
+SELECT SUBJECT_ID FROM `physionet-data.mimiciii_clinical.microbiologyevents`
+WHERE SPEC_TYPE_DESC="CATHETER TIP-IV")
+AND ITEMID IN (51191)
+
+/*CD8 cells percentage*/
+SELECT *
+FROM `physionet-data.mimiciii_clinical.labevents`
+WHERE SUBJECT_ID IN (
+SELECT SUBJECT_ID FROM `physionet-data.mimiciii_clinical.microbiologyevents`
+WHERE SPEC_TYPE_DESC="CATHETER TIP-IV")
+AND ITEMID IN (51194)
+
+/*Eosinophil count*/
+SELECT *
+FROM `physionet-data.mimiciii_clinical.labevents`
+WHERE SUBJECT_ID IN (
+SELECT SUBJECT_ID FROM `physionet-data.mimiciii_clinical.microbiologyevents`
+WHERE SPEC_TYPE_DESC="CATHETER TIP-IV")
+AND ITEMID IN (51199)
+
+/*Lymphocytes*/
+SELECT *
+FROM `physionet-data.mimiciii_clinical.labevents`
+WHERE SUBJECT_ID IN (
+SELECT SUBJECT_ID FROM `physionet-data.mimiciii_clinical.microbiologyevents`
+WHERE SPEC_TYPE_DESC="CATHETER TIP-IV")
+AND ITEMID IN (51244)
+
+/*Lymphocytes percent*/
+SELECT *
+FROM `physionet-data.mimiciii_clinical.labevents`
+WHERE SUBJECT_ID IN (
+SELECT SUBJECT_ID FROM `physionet-data.mimiciii_clinical.microbiologyevents`
+WHERE SPEC_TYPE_DESC="CATHETER TIP-IV")
+AND ITEMID IN (51245)
+
+/*Monocytes*/
+SELECT *
+FROM `physionet-data.mimiciii_clinical.labevents`
+WHERE SUBJECT_ID IN (
+SELECT SUBJECT_ID FROM `physionet-data.mimiciii_clinical.microbiologyevents`
+WHERE SPEC_TYPE_DESC="CATHETER TIP-IV")
+AND ITEMID IN (51253)
+
+/*Neutrophils*/
+SELECT *
+FROM `physionet-data.mimiciii_clinical.labevents`
+WHERE SUBJECT_ID IN (
+SELECT SUBJECT_ID FROM `physionet-data.mimiciii_clinical.microbiologyevents`
+WHERE SPEC_TYPE_DESC="CATHETER TIP-IV")
+AND ITEMID IN (51256)
+
+/*Platelet count*/
+SELECT *
+FROM `physionet-data.mimiciii_clinical.labevents`
+WHERE SUBJECT_ID IN (
+SELECT SUBJECT_ID FROM `physionet-data.mimiciii_clinical.microbiologyevents`
+WHERE SPEC_TYPE_DESC="CATHETER TIP-IV")
+AND ITEMID IN (51265)
+
+/*Red cell density width*/
+SELECT *
+FROM `physionet-data.mimiciii_clinical.labevents`
+WHERE SUBJECT_ID IN (
+SELECT SUBJECT_ID FROM `physionet-data.mimiciii_clinical.microbiologyevents`
+WHERE SPEC_TYPE_DESC="CATHETER TIP-IV")
+AND ITEMID IN (51277)
+
+/*Red Blood cells*/
+SELECT *
+FROM `physionet-data.mimiciii_clinical.labevents`
+WHERE SUBJECT_ID IN (
+SELECT SUBJECT_ID FROM `physionet-data.mimiciii_clinical.microbiologyevents`
+WHERE SPEC_TYPE_DESC="CATHETER TIP-IV")
+AND ITEMID IN (51279)
+
+/*Sedimentation Rate*/
+SELECT *
+FROM `physionet-data.mimiciii_clinical.labevents`
+WHERE SUBJECT_ID IN (
+SELECT SUBJECT_ID FROM `physionet-data.mimiciii_clinical.microbiologyevents`
+WHERE SPEC_TYPE_DESC="CATHETER TIP-IV")
+AND ITEMID IN (51288)
+
+/*White blood cell count*/
+SELECT *
+FROM `physionet-data.mimiciii_clinical.labevents`
+WHERE SUBJECT_ID IN (
+SELECT SUBJECT_ID FROM `physionet-data.mimiciii_clinical.microbiologyevents`
+WHERE SPEC_TYPE_DESC="CATHETER TIP-IV")
+AND ITEMID IN (51300)
+
+/*Nitrite*/
+SELECT *
+FROM `physionet-data.mimiciii_clinical.labevents`
+WHERE SUBJECT_ID IN (
+SELECT SUBJECT_ID FROM `physionet-data.mimiciii_clinical.microbiologyevents`
+WHERE SPEC_TYPE_DESC="CATHETER TIP-IV")
+AND ITEMID IN (51487)
+
+/*urine pH*/
+SELECT *
+FROM `physionet-data.mimiciii_clinical.labevents`
+WHERE SUBJECT_ID IN (
+SELECT SUBJECT_ID FROM `physionet-data.mimiciii_clinical.microbiologyevents`
+WHERE SPEC_TYPE_DESC="CATHETER TIP-IV")
+AND ITEMID IN (51491)
+
+/*Urine Specific Gravity*/
+SELECT *
+FROM `physionet-data.mimiciii_clinical.labevents`
+WHERE SUBJECT_ID IN (
+SELECT SUBJECT_ID FROM `physionet-data.mimiciii_clinical.microbiologyevents`
+WHERE SPEC_TYPE_DESC="CATHETER TIP-IV")
+AND ITEMID IN (51498)
+
+/*Urine appearance*/
+SELECT *
+FROM `physionet-data.mimiciii_clinical.labevents`
+WHERE SUBJECT_ID IN (
+SELECT SUBJECT_ID FROM `physionet-data.mimiciii_clinical.microbiologyevents`
+WHERE SPEC_TYPE_DESC="CATHETER TIP-IV")
+AND ITEMID IN (51506)
+
+/*Urine colour*/
+SELECT *
+FROM `physionet-data.mimiciii_clinical.labevents`
+WHERE SUBJECT_ID IN (
+SELECT SUBJECT_ID FROM `physionet-data.mimiciii_clinical.microbiologyevents`
+WHERE SPEC_TYPE_DESC="CATHETER TIP-IV")
+AND ITEMID IN (51508)
+
+/*White Blood cell percentage*/
+SELECT *
+FROM `physionet-data.mimiciii_clinical.labevents`
+WHERE SUBJECT_ID IN (
+SELECT SUBJECT_ID FROM `physionet-data.mimiciii_clinical.microbiologyevents`
+WHERE SPEC_TYPE_DESC="CATHETER TIP-IV")
+AND ITEMID IN (51533)
+
+/*End of lab test extraction*/
+
+------------------------------------------------------------------------------------------------------------
